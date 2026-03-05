@@ -1,4 +1,4 @@
-name: Deploy via FTP
+name: Deploy via SFTP
 
 on:
   push:
@@ -12,13 +12,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Deploy to FTP
+      - name: Deploy via SFTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          server:   ${{ secrets.FTP_SERVER }}
+          server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          server-dir: /home/kai_wbc/wbc.aball.club    # adjust to your target directory
+          protocol: sftp
+          port: 22
+          server-dir: /public_html/    # adjust to your target directory
           exclude: |
             **/.git*
             **/.git*/**
