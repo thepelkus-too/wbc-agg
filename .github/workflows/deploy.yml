@@ -17,7 +17,7 @@ jobs:
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
+          password: "${{ secrets.FTP_PASSWORD }}"
           port: 22
           local_path: ./
           remote_path: /public_html/
