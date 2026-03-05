@@ -12,12 +12,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Deploy via SFTP
-        uses: wlixcc/SFTP-Deploy-Action@v1.2.4
+      - name: Deploy via SCP
+        uses: appleboy/scp-action@v0.1.7
         with:
-          server: ${{ secrets.FTP_SERVER }}
+          host: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
-          password: "${{ secrets.FTP_PASSWORD }}"
+          password: ${{ secrets.FTP_PASSWORD }}
           port: 22
-          local_path: ./
-          remote_path: /home/kai_wbc/wbc.aball.club/
+          source: "./"
+          target: /home/kai_wbc/wbc.aball.club/
+          rm: false
