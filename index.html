@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>2023 WBC — MLB Player Stats</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <h1>2023 World Baseball Classic</h1>
+      <p class="subtitle">MLB Player Box Scores by Team &amp; Date</p>
+    </div>
+  </header>
+
+  <main>
+    <section class="controls" id="controls">
+      <div class="control-group">
+        <label for="team-select">MLB Team</label>
+        <select id="team-select" disabled>
+          <option value="">Loading teams…</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label for="date-picker">Date</label>
+        <input type="date" id="date-picker" disabled>
+      </div>
+    </section>
+
+    <section id="results">
+      <div class="splash">
+        <p>Select an MLB team and date to see WBC box scores.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Data from <a href="https://statsapi.mlb.com" target="_blank" rel="noopener">MLB Stats API</a>. 2023 WBC: March 8–21, 2023.</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,288 @@
+/* ─── Reset & Base ─────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --blue-dark:   #00285e;
+  --blue-mid:    #005da5;
+  --blue-light:  #d6e8f7;
+  --red:         #c8102e;
+  --gold:        #e6a817;
+  --grey-100:    #f4f6f9;
+  --grey-200:    #e8ecf1;
+  --grey-400:    #9aa5b4;
+  --grey-700:    #3d4a5c;
+  --text:        #1a2535;
+  --white:       #ffffff;
+  --radius:      6px;
+  --shadow:      0 1px 4px rgba(0,0,0,.12);
+}
+
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--grey-100);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── Header ────────────────────────────────────────────────────────────────── */
+header {
+  background: var(--blue-dark);
+  color: var(--white);
+  padding: 1.25rem 1.5rem;
+  border-bottom: 3px solid var(--red);
+}
+
+.header-inner { max-width: 1100px; margin: 0 auto; }
+
+header h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -.3px;
+}
+
+.subtitle {
+  font-size: .85rem;
+  color: var(--blue-light);
+  margin-top: .2rem;
+}
+
+/* ─── Main ──────────────────────────────────────────────────────────────────── */
+main {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  flex: 1;
+  width: 100%;
+}
+
+/* ─── Controls ──────────────────────────────────────────────────────────────── */
+.controls {
+  display: flex;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  background: var(--white);
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  box-shadow: var(--shadow);
+  margin-bottom: 1.5rem;
+}
+
+.controls.is-loading {
+  opacity: .6;
+  pointer-events: none;
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+}
+
+.control-group label {
+  font-size: .75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--grey-700);
+}
+
+.control-group select,
+.control-group input[type="date"] {
+  height: 2.25rem;
+  padding: 0 .75rem;
+  border: 1px solid var(--grey-400);
+  border-radius: var(--radius);
+  font-size: .9rem;
+  color: var(--text);
+  background: var(--white);
+  cursor: pointer;
+  outline: none;
+  transition: border-color .15s;
+}
+
+.control-group select:focus,
+.control-group input[type="date"]:focus {
+  border-color: var(--blue-mid);
+  box-shadow: 0 0 0 3px rgba(0,93,165,.15);
+}
+
+.control-group select { min-width: 220px; }
+.control-group input[type="date"] { min-width: 160px; }
+
+/* ─── Results ───────────────────────────────────────────────────────────────── */
+#results { display: flex; flex-direction: column; gap: 1.5rem; }
+
+/* Splash / empty / error states */
+.splash, .empty-state, .error-state {
+  background: var(--white);
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius);
+  padding: 3rem 2rem;
+  text-align: center;
+  color: var(--grey-700);
+  box-shadow: var(--shadow);
+}
+
+.error-state { border-left: 4px solid var(--red); color: var(--red); }
+
+.error-state .retry-btn {
+  margin-top: 1rem;
+  padding: .45rem 1.1rem;
+  border: 2px solid var(--red);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--red);
+  font-size: .85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+
+.error-state .retry-btn:hover { background: var(--red); color: var(--white); }
+
+/* Loading spinner */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 3rem 2rem;
+}
+
+.spinner {
+  width: 36px; height: 36px;
+  border: 3px solid var(--grey-200);
+  border-top-color: var(--blue-mid);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-state p { color: var(--grey-700); font-size: .9rem; }
+
+/* ─── Stat Sections ─────────────────────────────────────────────────────────── */
+.stat-section {
+  background: var(--white);
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.stat-section-header {
+  background: var(--blue-dark);
+  color: var(--white);
+  padding: .6rem 1rem;
+  font-size: .8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+
+.section-icon { font-size: 1rem; }
+
+/* ─── Tables ────────────────────────────────────────────────────────────────── */
+.table-wrap { overflow-x: auto; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .85rem;
+  white-space: nowrap;
+}
+
+thead th {
+  background: var(--grey-100);
+  color: var(--grey-700);
+  font-size: .72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  padding: .5rem .75rem;
+  text-align: right;
+  border-bottom: 1px solid var(--grey-200);
+}
+
+thead th.col-name,
+thead th.col-team { text-align: left; }
+
+tbody tr:nth-child(even) { background: var(--grey-100); }
+tbody tr:hover { background: var(--blue-light); }
+
+tbody td {
+  padding: .5rem .75rem;
+  text-align: right;
+  border-bottom: 1px solid var(--grey-200);
+  vertical-align: middle;
+}
+
+tbody tr:last-child td { border-bottom: none; }
+
+td.col-name, td.col-team { text-align: left; }
+
+td.col-name {
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+}
+
+/* ─── WBC Team Badge ────────────────────────────────────────────────────────── */
+.wbc-team {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  font-size: .8rem;
+  color: var(--grey-700);
+}
+
+.wbc-flag { font-size: 1rem; line-height: 1; }
+
+/* ─── Two-way Badge ─────────────────────────────────────────────────────────── */
+.badge-twoway {
+  display: inline-block;
+  background: var(--gold);
+  color: var(--white);
+  font-size: .65rem;
+  font-weight: 700;
+  padding: .1rem .35rem;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  flex-shrink: 0;
+}
+
+/* ─── Stat highlights ───────────────────────────────────────────────────────── */
+td.stat-highlight { font-weight: 700; color: var(--blue-mid); }
+
+/* ─── Footer ────────────────────────────────────────────────────────────────── */
+footer {
+  text-align: center;
+  padding: 1rem;
+  font-size: .78rem;
+  color: var(--grey-400);
+  border-top: 1px solid var(--grey-200);
+  background: var(--white);
+  margin-top: auto;
+}
+
+footer a { color: var(--blue-mid); text-decoration: none; }
+footer a:hover { text-decoration: underline; }
+
+/* ─── Responsive ────────────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  main { padding: 1rem; }
+  .controls { padding: .85rem 1rem; gap: .85rem; }
+  .control-group select { min-width: 100%; }
+  header h1 { font-size: 1.2rem; }
+}
