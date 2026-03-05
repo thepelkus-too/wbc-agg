@@ -13,15 +13,12 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Deploy via SFTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.4
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          protocol: sftp
           port: 22
-          server-dir: /public_html/    # adjust to your target directory
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/README*
+          local_path: ./
+          remote_path: /public_html/
+          exclude: '["**/.git*", "**/.git*/**", "**/README*"]'
