@@ -20,5 +20,4 @@ jobs:
           password: "${{ secrets.FTP_PASSWORD }}"
           port: 22
           local_path: ./
-          remote_path: /public_html/
-          exclude: '["**/.git*", "**/.git*/**", "**/README*"]'
+          remote_path: /home/kai_wbc/wbc.aball.club/
