@@ -137,12 +137,7 @@ function onDateChange(e) {
 
 function onTeamChange(e) {
   selectedTeamId = parseInt(e.target.value, 10);
-  // If we already have cached data for this date, just re-render
-  if (dateCache.has(selectedDate)) {
-    renderTable(selectedDate, selectedTeamId);
-  } else {
-    loadAndRender();
-  }
+  loadAndRender();
 }
 
 /* ─── Main Load + Render Orchestrator ───────────────────────────────────────── */
@@ -152,8 +147,14 @@ async function loadAndRender() {
   const reqId = ++currentRequestId;
 
   if (dateCache.has(selectedDate)) {
-    renderTable(selectedDate, selectedTeamId);
-    return;
+    const dayData = dateCache.get(selectedDate);
+    const hasUnresolved = dayData.players.some(p => (p.batting || p.pitching) && !p.currentTeamId);
+    if (!hasUnresolved) {
+      renderTable(selectedDate, selectedTeamId);
+      return;
+    }
+    // Stale cache — some players still have no team; drop it and re-fetch
+    dateCache.delete(selectedDate);
   }
 
   setLoading(true);
@@ -281,10 +282,13 @@ async function batchFetchPlayerTeams(personIds) {
 
   results.forEach(data => {
     (data.people || []).forEach(p => {
-      playerTeamCache.set(p.id, {
-        currentTeamId:   p.currentTeam ? p.currentTeam.id   : null,
-        currentTeamName: p.currentTeam ? p.currentTeam.name : null,
-      });
+      if (p.currentTeam) {
+        playerTeamCache.set(p.id, {
+          currentTeamId:   p.currentTeam.id,
+          currentTeamName: p.currentTeam.name,
+        });
+      }
+      // Don't cache null — lets the player be re-fetched on subsequent date loads
     });
   });
 }
