@@ -93,7 +93,7 @@ async function loadMlbTeams() {
 async function fetchSchedule() {
   const scheduleUrl =
     `${BASE_V1}/schedule` +
-    `?sportId=1&sportId=51&sportId=21` +
+    `?sportId=51&sportId=21` +
     `&startDate=${WBC_START_DATE}&endDate=${WBC_END_DATE}` +
     `&gameType=` +
     `&language=en` +
@@ -106,11 +106,9 @@ async function fetchSchedule() {
 
   scheduleIndex.clear();
   (data.dates || []).forEach(d => {
-    const wbcGamePks = (d.games || [])
-      .filter(g => g.sport && g.sport.id === WBC_SPORT_ID)
-      .map(g => g.gamePk);
-    if (wbcGamePks.length > 0) {
-      scheduleIndex.set(d.date, wbcGamePks);
+    const gamePks = (d.games || []).map(g => g.gamePk);
+    if (gamePks.length > 0) {
+      scheduleIndex.set(d.date, gamePks);
     }
   });
   return data;
