@@ -155,12 +155,7 @@ function onDateChange(e) {
 function onTeamChange(e) {
   selectedTeamId = parseInt(e.target.value, 10);
   dbg(`team changed → ${selectedTeamId} (${e.target.options[e.target.selectedIndex]?.text})`);
-  // If we already have cached data for this date, just re-render
-  if (dateCache.has(selectedDate)) {
-    renderTable(selectedDate, selectedTeamId);
-  } else {
-    loadAndRender();
-  }
+  loadAndRender();
 }
 
 /* ─── Main Load + Render Orchestrator ───────────────────────────────────────── */
@@ -174,9 +169,16 @@ async function loadAndRender() {
   dbg(`loadAndRender #${reqId}: date=${selectedDate} teamId=${selectedTeamId}`);
 
   if (dateCache.has(selectedDate)) {
-    dbg(`cache hit for ${selectedDate}`);
-    renderTable(selectedDate, selectedTeamId);
-    return;
+    const dayData = dateCache.get(selectedDate);
+    const hasUnresolved = dayData.players.some(p => (p.batting || p.pitching) && !p.currentTeamId);
+    if (!hasUnresolved) {
+      dbg(`cache hit for ${selectedDate}`);
+      renderTable(selectedDate, selectedTeamId);
+      return;
+    }
+    // Stale cache — some players still have no team; drop it and re-fetch
+    dbg(`stale cache for ${selectedDate} (null team players), re-fetching`);
+    dateCache.delete(selectedDate);
   }
 
   setLoading(true);
@@ -307,15 +309,18 @@ async function batchFetchPlayerTeams(personIds) {
   }
 
   const results = await Promise.all(
-    chunks.map(ids => apiFetch(`${BASE_V1}/people?personIds=${ids.join(',')}`))
+    chunks.map(ids => apiFetch(`${BASE_V1}/people?personIds=${ids.join(',')}&hydrate=currentTeam`))
   );
 
   results.forEach(data => {
     (data.people || []).forEach(p => {
-      playerTeamCache.set(p.id, {
-        currentTeamId:   p.currentTeam ? p.currentTeam.id   : null,
-        currentTeamName: p.currentTeam ? p.currentTeam.name : null,
-      });
+      if (p.currentTeam) {
+        playerTeamCache.set(p.id, {
+          currentTeamId:   p.currentTeam.id,
+          currentTeamName: p.currentTeam.name,
+        });
+      }
+      // Don't cache null — lets the player be re-fetched on subsequent date loads
     });
   });
 }
