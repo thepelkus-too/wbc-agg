@@ -52,20 +52,25 @@ let currentRequestId = 0;         // race-condition guard
 
 /* ─── Initialization ────────────────────────────────────────────────────────── */
 async function init() {
+  dbg('init() start');
   try {
     const [, schedule] = await Promise.all([
       loadMlbTeams(),
       fetchSchedule(),
     ]);
+    dbg(`scheduleIndex size=${scheduleIndex.size} dates=${Array.from(scheduleIndex.keys()).join(',')}`);
     populateControls(schedule);
     if (scheduleIndex.size === 0) {
+      dbg('no schedule data');
       renderEmpty('No 2026 WBC schedule data is available yet. Check back closer to the tournament.');
     }
+    dbg(`after populateControls: selectedDate=${selectedDate} selectedTeamId=${selectedTeamId}`);
     // Trigger initial load with defaults
     if (selectedDate && selectedTeamId) {
       await loadAndRender();
     }
   } catch (err) {
+    dbg('init error: ' + err.message);
     renderError('Failed to initialize. ' + err.message);
   }
 }
@@ -138,11 +143,13 @@ function populateControls(scheduleData) {
 /* ─── Event Handlers ────────────────────────────────────────────────────────── */
 function onDateChange(e) {
   selectedDate = e.target.value;
+  dbg(`date changed → ${selectedDate}`);
   loadAndRender();
 }
 
 function onTeamChange(e) {
   selectedTeamId = parseInt(e.target.value, 10);
+  dbg(`team changed → ${selectedTeamId} (${e.target.options[e.target.selectedIndex]?.text})`);
   // If we already have cached data for this date, just re-render
   if (dateCache.has(selectedDate)) {
     renderTable(selectedDate, selectedTeamId);
@@ -153,22 +160,32 @@ function onTeamChange(e) {
 
 /* ─── Main Load + Render Orchestrator ───────────────────────────────────────── */
 async function loadAndRender() {
-  if (!selectedDate || !selectedTeamId) return;
+  if (!selectedDate || !selectedTeamId) {
+    dbg(`loadAndRender skipped: date=${selectedDate} teamId=${selectedTeamId}`);
+    return;
+  }
 
   const reqId = ++currentRequestId;
+  dbg(`loadAndRender #${reqId}: date=${selectedDate} teamId=${selectedTeamId}`);
 
   if (dateCache.has(selectedDate)) {
+    dbg(`cache hit for ${selectedDate}`);
     renderTable(selectedDate, selectedTeamId);
     return;
   }
 
   setLoading(true);
   try {
+    const pks = scheduleIndex.get(selectedDate);
+    dbg(`fetching day data for ${selectedDate}: gamePks=${pks ? pks.join(',') : 'none'}`);
     await fetchDayData(selectedDate, reqId);
-    if (reqId !== currentRequestId) return; // stale
+    if (reqId !== currentRequestId) { dbg(`stale req #${reqId}, ignoring`); return; }
+    const dayData = dateCache.get(selectedDate);
+    dbg(`day data ready: ${dayData ? dayData.players.length : 0} players`);
     renderTable(selectedDate, selectedTeamId);
   } catch (err) {
     if (reqId !== currentRequestId) return;
+    dbg('loadAndRender error: ' + err.message);
     renderError('Failed to load data: ' + err.message);
   } finally {
     if (reqId === currentRequestId) setLoading(false);
@@ -317,16 +334,19 @@ function renderTable(date, teamId) {
   const dayData  = dateCache.get(date);
 
   if (!dayData) {
+    dbg(`renderTable: no dayData for ${date}`);
     renderEmpty('No data available for this date.');
     return;
   }
 
   if (!scheduleIndex.has(date) || scheduleIndex.get(date).length === 0) {
+    dbg(`renderTable: no schedule games for ${date}`);
     results.innerHTML = `<div class="empty-state"><p>No WBC games were played on ${formatDate(date)}.</p></div>`;
     return;
   }
 
   const teamPlayers = dayData.mlbTeamIndex.get(teamId) || [];
+  dbg(`renderTable: teamId=${teamId} players=${teamPlayers.length} mlbTeamIndex keys=[${Array.from(dayData.mlbTeamIndex.keys()).join(',')}]`);
   const teamName    = (mlbTeams.find(t => t.id === teamId) || {}).name || 'this team';
 
   if (teamPlayers.length === 0) {
@@ -558,6 +578,16 @@ function formatDate(isoDate) {
   const [y, m, d] = isoDate.split('-');
   const dt = new Date(+y, +m - 1, +d);
   return dt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+/* ─── Debug Logger ──────────────────────────────────────────────────────────── */
+function dbg(msg) {
+  const log = document.getElementById('debug-log');
+  if (!log) return;
+  const line = document.createElement('div');
+  line.textContent = new Date().toISOString().substr(11, 8) + ' ' + msg;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
 }
 
 /* ─── Boot ──────────────────────────────────────────────────────────────────── */

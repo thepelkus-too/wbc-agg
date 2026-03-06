@@ -28,6 +28,12 @@
       </div>
     </section>
 
+    <section id="debug-panel" style="background:#111;color:#0f0;font-family:monospace;font-size:12px;padding:8px;margin:8px 0;border-radius:4px;max-height:200px;overflow-y:auto;display:none;">
+      <strong style="color:#ff0;">DEBUG</strong> <button onclick="document.getElementById('debug-panel').style.display='none'" style="float:right;font-size:10px;">hide</button>
+      <div id="debug-log"></div>
+    </section>
+    <button id="debug-toggle" onclick="var p=document.getElementById('debug-panel');p.style.display=p.style.display==='none'?'block':'none';" style="font-size:11px;padding:2px 8px;margin:4px 0;opacity:0.5;">debug</button>
+
     <section id="results">
       <div class="splash">
         <p>Select an MLB team and date to see WBC box scores.</p>
