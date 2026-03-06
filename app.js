@@ -1,7 +1,7 @@
 /* ─── Constants ─────────────────────────────────────────────────────────────── */
 const BASE           = 'https://statsapi.mlb.com/api/v1';
 const WBC_SPORT_ID   = 51;
-const WBC_SEASON     = 2023;
+const WBC_SEASON     = 2026;
 const BATCH_SIZE     = 200;
 
 /* ─── WBC Team → Flag Emoji ─────────────────────────────────────────────────── */
@@ -56,6 +56,9 @@ async function init() {
       fetchSchedule(),
     ]);
     populateControls(schedule);
+    if (scheduleIndex.size === 0) {
+      renderEmpty('No 2026 WBC schedule data is available yet. Check back closer to the tournament.');
+    }
     // Trigger initial load with defaults
     if (selectedDate && selectedTeamId) {
       await loadAndRender();
@@ -107,22 +110,23 @@ async function fetchSchedule() {
 
 /* ─── Populate Controls ─────────────────────────────────────────────────────── */
 function populateControls(scheduleData) {
-  const dates = Array.from(scheduleIndex.keys()).sort();
-  if (dates.length === 0) return;
+  const picker  = document.getElementById('date-picker');
+  const teamSel = document.getElementById('team-select');
+  const dates   = Array.from(scheduleIndex.keys()).sort();
 
-  const picker = document.getElementById('date-picker');
-  picker.min = dates[0];
-  picker.max = dates[dates.length - 1];
-  picker.value = dates[0];
-  selectedDate = dates[0];
+  if (dates.length > 0) {
+    picker.min   = dates[0];
+    picker.max   = dates[dates.length - 1];
+    picker.value = dates[0];
+    selectedDate = dates[0];
+  }
 
-  // Enable controls
-  document.getElementById('team-select').disabled = false;
-  picker.disabled = false;
+  // Always enable controls and attach listeners
+  teamSel.disabled = false;
+  picker.disabled  = false;
 
-  // Event listeners
   picker.addEventListener('change', onDateChange);
-  document.getElementById('team-select').addEventListener('change', onTeamChange);
+  teamSel.addEventListener('change', onTeamChange);
 }
 
 /* ─── Event Handlers ────────────────────────────────────────────────────────── */

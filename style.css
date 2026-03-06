@@ -283,6 +283,8 @@ footer a:hover { text-decoration: underline; }
 @media (max-width: 600px) {
   main { padding: 1rem; }
   .controls { padding: .85rem 1rem; gap: .85rem; }
-  .control-group select { min-width: 100%; }
+  .control-group { width: 100%; }
+  .control-group select,
+  .control-group input[type="date"] { min-width: 100%; }
   header h1 { font-size: 1.2rem; }
 }
