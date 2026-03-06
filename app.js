@@ -54,18 +54,23 @@ let currentRequestId = 0;         // race-condition guard
 async function init() {
   dbg('init() start');
   try {
-    const [, schedule] = await Promise.all([
+    // Run both fetches, but don't let a schedule failure block the team dropdown
+    const [, scheduleResult] = await Promise.allSettled([
       loadMlbTeams(),
       fetchSchedule(),
     ]);
+
+    if (scheduleResult.status === 'rejected') {
+      dbg('schedule fetch failed: ' + scheduleResult.reason?.message);
+    }
+
     dbg(`scheduleIndex size=${scheduleIndex.size} dates=${Array.from(scheduleIndex.keys()).join(',')}`);
-    populateControls(schedule);
+    populateControls(null);
     if (scheduleIndex.size === 0) {
       dbg('no schedule data');
       renderEmpty('No 2026 WBC schedule data is available yet. Check back closer to the tournament.');
     }
     dbg(`after populateControls: selectedDate=${selectedDate} selectedTeamId=${selectedTeamId}`);
-    // Trigger initial load with defaults
     if (selectedDate && selectedTeamId) {
       await loadAndRender();
     }
