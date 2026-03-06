@@ -309,7 +309,7 @@ async function batchFetchPlayerTeams(personIds) {
   }
 
   const results = await Promise.all(
-    chunks.map(ids => apiFetch(`${BASE_V1}/people?personIds=${ids.join(',')}`))
+    chunks.map(ids => apiFetch(`${BASE_V1}/people?personIds=${ids.join(',')}&hydrate=currentTeam`))
   );
 
   results.forEach(data => {
