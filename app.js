@@ -1,7 +1,9 @@
 /* ─── Constants ─────────────────────────────────────────────────────────────── */
-const BASE           = 'https://statsapi.mlb.com/api/v1';
+const BASE_V1        = 'https://statsapi.mlb.com/api/v1';
+const BASE_LIVE      = 'https://ws.statsapi.mlb.com/api/v1.1';
 const WBC_SPORT_ID   = 51;
-const WBC_SEASON     = 2026;
+const WBC_START_DATE = '2026-03-01';
+const WBC_END_DATE   = '2026-04-15';
 const BATCH_SIZE     = 200;
 
 /* ─── WBC Team → Flag Emoji ─────────────────────────────────────────────────── */
@@ -50,20 +52,30 @@ let currentRequestId = 0;         // race-condition guard
 
 /* ─── Initialization ────────────────────────────────────────────────────────── */
 async function init() {
+  dbg('init() start');
   try {
-    const [, schedule] = await Promise.all([
+    // Run both fetches, but don't let a schedule failure block the team dropdown
+    const [, scheduleResult] = await Promise.allSettled([
       loadMlbTeams(),
       fetchSchedule(),
     ]);
-    populateControls(schedule);
+
+    if (scheduleResult.status === 'rejected') {
+      dbg('schedule fetch failed: ' + scheduleResult.reason?.message);
+    }
+
+    dbg(`scheduleIndex size=${scheduleIndex.size} dates=${Array.from(scheduleIndex.keys()).join(',')}`);
+    populateControls(null);
     if (scheduleIndex.size === 0) {
+      dbg('no schedule data');
       renderEmpty('No 2026 WBC schedule data is available yet. Check back closer to the tournament.');
     }
-    // Trigger initial load with defaults
+    dbg(`after populateControls: selectedDate=${selectedDate} selectedTeamId=${selectedTeamId}`);
     if (selectedDate && selectedTeamId) {
       await loadAndRender();
     }
   } catch (err) {
+    dbg('init error: ' + err.message);
     renderError('Failed to initialize. ' + err.message);
   }
 }
@@ -89,14 +101,18 @@ async function loadMlbTeams() {
 
 /* ─── Fetch WBC Schedule ────────────────────────────────────────────────────── */
 async function fetchSchedule() {
-  const url = `${BASE}/schedule?sportId=${WBC_SPORT_ID}&season=${WBC_SEASON}&gameType=I`;
-  let data;
-  try {
-    data = await apiFetch(url);
-  } catch {
-    // gameType I may not work — try without gameType filter
-    data = await apiFetch(`${BASE}/schedule?sportId=${WBC_SPORT_ID}&season=${WBC_SEASON}`);
-  }
+  const scheduleUrl =
+    `${BASE_V1}/schedule` +
+    `?sportId=51&sportId=21` +
+    `&startDate=${WBC_START_DATE}&endDate=${WBC_END_DATE}` +
+    `&gameType=` +
+    `&language=en` +
+    `&leagueId=103&leagueId=104&leagueId=590&leagueId=160&leagueId=159` +
+    `&hydrate=team,linescore,flags,seriesStatus(useOverride=true),statusFlags` +
+    `&sortBy=gameDate,gameStatus,gameType` +
+    `&timeZone=America/New_York`;
+
+  const data = await apiFetch(scheduleUrl);
 
   scheduleIndex.clear();
   (data.dates || []).forEach(d => {
@@ -132,11 +148,13 @@ function populateControls(scheduleData) {
 /* ─── Event Handlers ────────────────────────────────────────────────────────── */
 function onDateChange(e) {
   selectedDate = e.target.value;
+  dbg(`date changed → ${selectedDate}`);
   loadAndRender();
 }
 
 function onTeamChange(e) {
   selectedTeamId = parseInt(e.target.value, 10);
+  dbg(`team changed → ${selectedTeamId} (${e.target.options[e.target.selectedIndex]?.text})`);
   // If we already have cached data for this date, just re-render
   if (dateCache.has(selectedDate)) {
     renderTable(selectedDate, selectedTeamId);
@@ -147,22 +165,32 @@ function onTeamChange(e) {
 
 /* ─── Main Load + Render Orchestrator ───────────────────────────────────────── */
 async function loadAndRender() {
-  if (!selectedDate || !selectedTeamId) return;
+  if (!selectedDate || !selectedTeamId) {
+    dbg(`loadAndRender skipped: date=${selectedDate} teamId=${selectedTeamId}`);
+    return;
+  }
 
   const reqId = ++currentRequestId;
+  dbg(`loadAndRender #${reqId}: date=${selectedDate} teamId=${selectedTeamId}`);
 
   if (dateCache.has(selectedDate)) {
+    dbg(`cache hit for ${selectedDate}`);
     renderTable(selectedDate, selectedTeamId);
     return;
   }
 
   setLoading(true);
   try {
+    const pks = scheduleIndex.get(selectedDate);
+    dbg(`fetching day data for ${selectedDate}: gamePks=${pks ? pks.join(',') : 'none'}`);
     await fetchDayData(selectedDate, reqId);
-    if (reqId !== currentRequestId) return; // stale
+    if (reqId !== currentRequestId) { dbg(`stale req #${reqId}, ignoring`); return; }
+    const dayData = dateCache.get(selectedDate);
+    dbg(`day data ready: ${dayData ? dayData.players.length : 0} players`);
     renderTable(selectedDate, selectedTeamId);
   } catch (err) {
     if (reqId !== currentRequestId) return;
+    dbg('loadAndRender error: ' + err.message);
     renderError('Failed to load data: ' + err.message);
   } finally {
     if (reqId === currentRequestId) setLoading(false);
@@ -178,9 +206,12 @@ async function fetchDayData(date, reqId) {
     return;
   }
 
-  // Fetch all box scores for the day in parallel
+  // Fetch all live game feeds for the day in parallel and extract boxscore
   const boxscores = await Promise.all(
-    gamePks.map(pk => apiFetch(`${BASE}/game/${pk}/boxscore`))
+    gamePks.map(pk =>
+      apiFetch(`${BASE_LIVE}/game/${pk}/feed/live?language=en`)
+        .then(data => data.liveData.boxscore)
+    )
   );
 
   if (reqId !== currentRequestId) return;
@@ -276,7 +307,7 @@ async function batchFetchPlayerTeams(personIds) {
   }
 
   const results = await Promise.all(
-    chunks.map(ids => apiFetch(`${BASE}/people?personIds=${ids.join(',')}`))
+    chunks.map(ids => apiFetch(`${BASE_V1}/people?personIds=${ids.join(',')}`))
   );
 
   results.forEach(data => {
@@ -308,16 +339,19 @@ function renderTable(date, teamId) {
   const dayData  = dateCache.get(date);
 
   if (!dayData) {
+    dbg(`renderTable: no dayData for ${date}`);
     renderEmpty('No data available for this date.');
     return;
   }
 
   if (!scheduleIndex.has(date) || scheduleIndex.get(date).length === 0) {
+    dbg(`renderTable: no schedule games for ${date}`);
     results.innerHTML = `<div class="empty-state"><p>No WBC games were played on ${formatDate(date)}.</p></div>`;
     return;
   }
 
   const teamPlayers = dayData.mlbTeamIndex.get(teamId) || [];
+  dbg(`renderTable: teamId=${teamId} players=${teamPlayers.length} mlbTeamIndex keys=[${Array.from(dayData.mlbTeamIndex.keys()).join(',')}]`);
   const teamName    = (mlbTeams.find(t => t.id === teamId) || {}).name || 'this team';
 
   if (teamPlayers.length === 0) {
@@ -549,6 +583,16 @@ function formatDate(isoDate) {
   const [y, m, d] = isoDate.split('-');
   const dt = new Date(+y, +m - 1, +d);
   return dt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+/* ─── Debug Logger ──────────────────────────────────────────────────────────── */
+function dbg(msg) {
+  const log = document.getElementById('debug-log');
+  if (!log) return;
+  const line = document.createElement('div');
+  line.textContent = new Date().toISOString().substr(11, 8) + ' ' + msg;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
 }
 
 /* ─── Boot ──────────────────────────────────────────────────────────────────── */
