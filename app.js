@@ -1,7 +1,9 @@
 /* ─── Constants ─────────────────────────────────────────────────────────────── */
-const BASE           = 'https://statsapi.mlb.com/api/v1';
+const BASE_V1        = 'https://statsapi.mlb.com/api/v1';
+const BASE_LIVE      = 'https://ws.statsapi.mlb.com/api/v1.1';
 const WBC_SPORT_ID   = 51;
-const WBC_SEASON     = 2026;
+const WBC_START_DATE = '2026-03-01';
+const WBC_END_DATE   = '2026-04-15';
 const BATCH_SIZE     = 200;
 
 /* ─── WBC Team → Flag Emoji ─────────────────────────────────────────────────── */
@@ -89,20 +91,26 @@ async function loadMlbTeams() {
 
 /* ─── Fetch WBC Schedule ────────────────────────────────────────────────────── */
 async function fetchSchedule() {
-  const url = `${BASE}/schedule?sportId=${WBC_SPORT_ID}&season=${WBC_SEASON}&gameType=I`;
-  let data;
-  try {
-    data = await apiFetch(url);
-  } catch {
-    // gameType I may not work — try without gameType filter
-    data = await apiFetch(`${BASE}/schedule?sportId=${WBC_SPORT_ID}&season=${WBC_SEASON}`);
-  }
+  const scheduleUrl =
+    `${BASE_V1}/schedule` +
+    `?sportId=1&sportId=51&sportId=21` +
+    `&startDate=${WBC_START_DATE}&endDate=${WBC_END_DATE}` +
+    `&gameType=` +
+    `&language=en` +
+    `&leagueId=103&leagueId=104&leagueId=590&leagueId=160&leagueId=159` +
+    `&hydrate=team,linescore,flags,seriesStatus(useOverride=true),statusFlags` +
+    `&sortBy=gameDate,gameStatus,gameType` +
+    `&timeZone=America/New_York`;
+
+  const data = await apiFetch(scheduleUrl);
 
   scheduleIndex.clear();
   (data.dates || []).forEach(d => {
-    const gamePks = (d.games || []).map(g => g.gamePk);
-    if (gamePks.length > 0) {
-      scheduleIndex.set(d.date, gamePks);
+    const wbcGamePks = (d.games || [])
+      .filter(g => g.sport && g.sport.id === WBC_SPORT_ID)
+      .map(g => g.gamePk);
+    if (wbcGamePks.length > 0) {
+      scheduleIndex.set(d.date, wbcGamePks);
     }
   });
   return data;
@@ -178,9 +186,12 @@ async function fetchDayData(date, reqId) {
     return;
   }
 
-  // Fetch all box scores for the day in parallel
+  // Fetch all live game feeds for the day in parallel and extract boxscore
   const boxscores = await Promise.all(
-    gamePks.map(pk => apiFetch(`${BASE}/game/${pk}/boxscore`))
+    gamePks.map(pk =>
+      apiFetch(`${BASE_LIVE}/game/${pk}/feed/live?language=en`)
+        .then(data => data.liveData.boxscore)
+    )
   );
 
   if (reqId !== currentRequestId) return;
@@ -276,7 +287,7 @@ async function batchFetchPlayerTeams(personIds) {
   }
 
   const results = await Promise.all(
-    chunks.map(ids => apiFetch(`${BASE}/people?personIds=${ids.join(',')}`))
+    chunks.map(ids => apiFetch(`${BASE_V1}/people?personIds=${ids.join(',')}`))
   );
 
   results.forEach(data => {
